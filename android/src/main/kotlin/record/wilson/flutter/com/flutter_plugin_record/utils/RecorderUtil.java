@@ -83,7 +83,13 @@ public class RecorderUtil {
     private void initRecorder() {
         recorder = MsRecorder.wav(
                 new File(voicePath),
-                new AudioRecordConfig(),
+                // new AudioRecordConfig(), // 使用默认配置
+                new AudioRecordConfig(
+                    MediaRecorder.AudioSource.MIC, // 音频源
+                    11025, // 采样率，44100、22050、16000、11025 Hz
+                    AudioFormat.CHANNEL_IN_MONO, // 单声道、双声道/立体声
+                    AudioFormat.ENCODING_PCM_8BIT // 8/16 bit
+                ),
                 new PullTransport.Default()
                         .setOnAudioChunkPulledListener(new PullTransport.OnAudioChunkPulledListener() {
                             @Override
