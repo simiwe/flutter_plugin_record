@@ -1,5 +1,8 @@
 package record.wilson.flutter.com.flutter_plugin_record.utils;
 
+import android.media.AudioFormat;
+import android.media.MediaRecorder;
+
 import android.os.Environment;
 import android.util.Log;
 
