@@ -13,6 +13,7 @@ class VoiceWidget extends StatefulWidget {
   final double? height;
   final EdgeInsets? margin;
   final Decoration? decoration;
+  final int maxDuration;
 
   /// startRecord 开始录制回调  stopRecord回调
   const VoiceWidget({
@@ -22,6 +23,7 @@ class VoiceWidget extends StatefulWidget {
     this.height,
     this.decoration,
     this.margin,
+    this.maxDuration = 60,
   }) : super(key: key);
 
   @override
@@ -30,7 +32,6 @@ class VoiceWidget extends StatefulWidget {
 
 class _VoiceWidgetState extends State<VoiceWidget> {
   // 倒计时总时长
-  int _countTotal = 12;
   double starty = 0.0;
   double offset = 0.0;
   bool canceled = false;
@@ -116,12 +117,12 @@ class _VoiceWidgetState extends State<VoiceWidget> {
             children: <Widget>[
               Container(
                 margin: const EdgeInsets.only(top: 10),
-                child: _countTotal - _count < 11
+                child: widget.maxDuration - _count < 11
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 15.0),
                           child: Text(
-                            (_countTotal - _count).toString(),
+                            (widget.maxDuration - _count).toString(),
                             style: TextStyle(
                               fontSize: 70.0,
                               color: Colors.white,
@@ -232,7 +233,7 @@ class _VoiceWidgetState extends State<VoiceWidget> {
           starty = details.globalPosition.dy;
           _timer = Timer.periodic(Duration(milliseconds: 1000), (t) {
             _count++;
-            if (_count == _countTotal) {
+            if (_count >= widget.maxDuration) {
               hideVoiceView();
             }
           });
