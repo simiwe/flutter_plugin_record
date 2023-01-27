@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_plugin_record/flutter_plugin_record.dart';
@@ -6,25 +7,22 @@ import 'package:flutter_plugin_record/utils/common_toast.dart';
 
 import 'custom_overlay.dart';
 
-typedef startRecord = Future Function();
-typedef stopRecord = Future Function();
-
 class VoiceWidget extends StatefulWidget {
   final Function? startRecord;
-  final Function? stopRecord;
+  final Function(String path, double duration)? stopRecord;
   final double? height;
   final EdgeInsets? margin;
   final Decoration? decoration;
 
   /// startRecord 开始录制回调  stopRecord回调
-  const VoiceWidget(
-      {Key? key,
-      this.startRecord,
-      this.stopRecord,
-      this.height,
-      this.decoration,
-      this.margin})
-      : super(key: key);
+  const VoiceWidget({
+    Key? key,
+    this.startRecord,
+    this.stopRecord,
+    this.height,
+    this.decoration,
+    this.margin,
+  }) : super(key: key);
 
   @override
   _VoiceWidgetState createState() => _VoiceWidgetState();
@@ -35,7 +33,7 @@ class _VoiceWidgetState extends State<VoiceWidget> {
   int _countTotal = 12;
   double starty = 0.0;
   double offset = 0.0;
-  bool isUp = false;
+  bool canceled = false;
   String textShow = "按住说话";
   String toastShow = "手指上滑,取消发送";
   String voiceIco = "images/voice_volume_1.png";
@@ -57,7 +55,7 @@ class _VoiceWidgetState extends State<VoiceWidget> {
     ///初始化方法的监听
     recordPlugin?.responseFromInit.listen((data) {
       if (data) {
-        print("初始化成功");
+        // print("初始化成功");
       } else {
         print("初始化失败");
       }
@@ -67,12 +65,15 @@ class _VoiceWidgetState extends State<VoiceWidget> {
     recordPlugin?.response.listen((data) {
       if (data.msg == "onStop") {
         ///结束录制时会返回录制文件的地址方便上传服务器
-        print("onStop  " + data.path!);
-        if (widget.stopRecord != null)
-          widget.stopRecord!(data.path, data.audioTimeLength);
+        if (data.path != null && data.audioTimeLength != null) {
+          if (canceled) {
+            deleteFile(data.path!);
+          } else {
+            widget.stopRecord?.call(data.path!, data.audioTimeLength!);
+          }
+        }
       } else if (data.msg == "onStart") {
-        print("onStart --");
-        if (widget.startRecord != null) widget.startRecord!();
+        widget.startRecord?.call();
       }
     });
 
@@ -102,7 +103,7 @@ class _VoiceWidgetState extends State<VoiceWidget> {
         }
       });
 
-      print("振幅大小   " + voiceData.toString() + "  " + voiceIco);
+      // print("振幅大小   " + voiceData.toString() + "  " + voiceIco);
     });
   }
 
@@ -176,7 +177,7 @@ class _VoiceWidgetState extends State<VoiceWidget> {
               '!',
               style: TextStyle(fontSize: 80, color: Colors.white),
             ));
-        isUp = true;
+        canceled = true;
       }
       _timer?.cancel();
       _count = 0;
@@ -192,19 +193,13 @@ class _VoiceWidgetState extends State<VoiceWidget> {
       overlayEntry?.remove();
       overlayEntry = null;
     }
-
-    if (isUp) {
-      print("取消发送");
-    } else {
-      print("进行发送");
-    }
   }
 
   moveVoiceView() {
     // print(offset - start);
     setState(() {
-      isUp = starty - offset > 100 ? true : false;
-      if (isUp) {
+      canceled = starty - offset > 100 ? true : false;
+      if (canceled) {
         textShow = "松开手指,取消发送";
         toastShow = textShow;
       } else {
@@ -237,7 +232,6 @@ class _VoiceWidgetState extends State<VoiceWidget> {
           starty = details.globalPosition.dy;
           _timer = Timer.periodic(Duration(milliseconds: 1000), (t) {
             _count++;
-            print('_count is 👉 $_count');
             if (_count == _countTotal) {
               hideVoiceView();
             }
@@ -275,5 +269,11 @@ class _VoiceWidgetState extends State<VoiceWidget> {
     recordPlugin?.dispose();
     _timer?.cancel();
     super.dispose();
+  }
+
+  void deleteFile(String path) async {
+    try {
+      await File(path).delete();
+    } catch (_, __) {}
   }
 }
